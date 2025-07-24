@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desafio da Seita que Dói Menos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2ecc71; 
+            text-shadow: 0 0 8px #2ecc71;
+            margin-bottom: 10px;
+        }
+        
+        #main-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        #game-container {
+            border: 2px solid #2ecc71;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #1e1e1e;
+            box-shadow: 0 0 25px rgba(46, 204, 113, 0.5);
+        }
+
+        #game-screen {
+            width: 800px;
+            height: 500px;
+            background-color: #000;
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-object {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            font-size: 18px;
+            line-height: 20px;
+            text-align: center;
+        }
+
+        #player { color: #ffffff; z-index: 10; }
+        .enemy { z-index: 5; transition: top 0.05s linear, left 0.05s linear; }
+        .item { z-index: 4; }
+        .joint { color: #2ecc71; }
+        .lighter { color: #f1c40f; }
+
+        .projectile {
+            width: 8px;
+            height: 8px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 5px #fff;
+            z-index: 8;
+        }
+        
+        /* Ponto 3: Estilo da bomba da mãe */
+        .enemy-projectile {
+            color: #ff79c6;
+            z-index: 8;
+        }
+
+        #ui-panel {
+            margin-top: 15px;
+            padding: 10px;
+            border-top: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1em;
+            width: 800px;
+        }
+
+        #game-over-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100; text-align: center;
+        }
+        #game-over-title { font-size: 2.5em; margin-bottom: 20px; color: #f44336; }
+        #game-over-overlay p { font-size: 1.2em; margin: 5px 0; }
+        .score-recap { color: #ffeb3b; font-weight: bold; }
+
+        #legend-panel {
+            padding: 20px;
+            border: 2px solid #555;
+            border-radius: 10px;
+            background-color: #1e1e1e;
+            width: 220px;
+            text-align: left;
+        }
+        #legend-panel h3 {
+            margin-top: 0; text-align: center; color: #ccc;
+            border-bottom: 1px solid #444; padding-bottom: 10px;
+        }
+        #legend-panel ul { list-style: none; padding: 0; margin: 0; }
+        #legend-panel li { margin-bottom: 15px; display: flex; align-items: center; }
+        #legend-panel li i { width: 30px; text-align: center; font-size: 1.2em; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <div id="main-wrapper">
+        <div id="game-container">
+            <h1>Desafio da Seita que Dói Menos</h1>
+            <div id="game-screen">
+                <div id="game-over-overlay">
+                    <h2 id="game-over-title">FIM DE JOGO</h2>
+                    <p>Sua pontuação: <span id="final-score" class="score-recap"></span></p>
+                    <p>Seu recorde: <span id="high-score" class="score-recap"></span></p>
+                    <p style="margin-top: 20px;">Pressione F5 para tentar novamente.</p>
+                </div>
+                <div id="player" class="game-object"><i class="fas fa-ghost"></i></div>
+            </div>
+            <div id="ui-panel">
+                <div id="lives-display"></div>
+                <div id="score-display"></div>
+            </div>
+            <p style="margin-top: 10px; color: #888; font-size: 0.9em;">
+                Use as <b>SETAS</b> para mover e a <b>BARRA DE ESPAÇO</b> para atirar.
+            </p>
+        </div>
+
+        <div id="legend-panel">
+            <h3>Legenda</h3>
+            <ul>
+                <li><i class="fas fa-ghost" style="color: #ffffff;"></i> - Você</li>
+                <li><i class="fas fa-cannabis" style="color: #2ecc71;"></i> - Baseado</li>
+                <li><i class="fas fa-fire-flame-curved" style="color: #f1c40f;"></i> - Isqueiro</li>
+                <hr>
+                <li><i class="fas fa-user-shield" style="color: #3498db;"></i> - Polícia</li>
+                <li><i class="fas fa-person-dress" style="color: #ff79c6;"></i> - Mãe</li>
+                <li><i class="fas fa-cross" style="color: #9b59b6;"></i> - Padre</li>
+                <li><i class="fas fa-user-secret" style="color: #e74c3c;"></i> - Crime</li>
+                <hr>
+                <li><i class="fas fa-bomb" style="color: #ff79c6;"></i> - Bomba (Desvie!)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameScreen = document.getElementById('game-screen');
+            const playerEl = document.getElementById('player');
+            const livesDisplay = document.getElementById('lives-display');
+            const scoreDisplay = document.getElementById('score-display');
+            const gameOverOverlay = document.getElementById('game-over-overlay');
+            const gameOverTitle = document.getElementById('game-over-title');
+            const finalScoreEl = document.getElementById('final-score');
+            const highScoreEl = document.getElementById('high-score');
+
+            const GRID_SIZE = 20;
+            const SCREEN_WIDTH_CELLS = gameScreen.clientWidth / GRID_SIZE;
+            const SCREEN_HEIGHT_CELLS = gameScreen.clientHeight / GRID_SIZE;
+            const GAME_TICK_INTERVAL_MS = 50;
+
+            const ENEMY_TYPES = {
+                police: { icon: 'fa-user-shield', color: '#3498db', pattern: 'chase' },
+                mom: { icon: 'fa-person-dress', color: '#ff79c6', pattern: 'random_shoot' },
+                priest: { icon: 'fa-cross', color: '#9b59b6', pattern: 'horizontal' },
+                crime: { icon: 'fa-user-secret', color: '#e74c3c', pattern: 'vertical' }
+            };
+
+            let state = {};
+            let gameInterval;
+            let enemyIdCounter = 0;
+
+            function setupGame() {
+                if (gameInterval) clearInterval(gameInterval);
+                document.querySelectorAll('.item, .enemy, .projectile, .enemy-projectile').forEach(el => el.remove());
+
+                state = {
+                    player: { x: 1, y: 1, lastDir: { dx: 0, dy: -1 } },
+                    items: { joints: [], lighters: [] },
+                    enemies: [], projectiles: [], enemyProjectiles: [],
+                    hasCollectedJoint: false, // Ponto 2: Inventário trocado por um status booleano
+                    lives: 3, score: 0, gameOver: false, canShoot: true
+                };
+                
+                spawnItemSet();
+                spawnEnemy('mom', 1);
+                spawnEnemy('priest', 1);
+                spawnEnemy('crime', 1);
+
+                gameOverOverlay.style.display = 'none';
+                render();
+                gameInterval = setInterval(gameTick, GAME_TICK_INTERVAL_MS);
+            }
+
+            function spawnItemSet() { createGameObject('joint'); createGameObject('lighter'); }
+            function spawnEnemy(subType, count = 1) { for(let i=0; i<count; i++) createGameObject('enemy', subType); }
+
+            function createGameObject(objectType, subType = '') {
+                const el = document.createElement('div');
+                el.classList.add('game-object');
+                let newObjectState = { x: 0, y: 0, element: el };
+                
+                do {
+                    newObjectState.x = Math.floor(Math.random() * SCREEN_WIDTH_CELLS);
+                    newObjectState.y = Math.floor(Math.random() * SCREEN_HEIGHT_CELLS);
+                } while (Math.hypot(newObjectState.x - state.player.x, newObjectState.y - state.player.y) < 10);
+
+                if (objectType === 'enemy') {
+                    el.classList.add('enemy');
+                    newObjectState.id = enemyIdCounter++;
+                    newObjectState.type = ENEMY_TYPES[subType];
+                    newObjectState.direction = 1;
+                    if (subType === 'mom') newObjectState.chineloOnScreen = false;
+                    if (newObjectState.type.pattern === 'horizontal') newObjectState.patrolLine = newObjectState.y;
+                    if (newObjectState.type.pattern === 'vertical') newObjectState.patrolLine = newObjectState.x;
+                    el.innerHTML = `<i class="fas ${newObjectState.type.icon}"></i>`;
+                    el.style.color = newObjectState.type.color;
+                    state.enemies.push(newObjectState);
+                } else {
+                    el.classList.add('item', objectType);
+                    if (objectType === 'joint') {
+                        el.innerHTML = '<i class="fas fa-cannabis"></i>'; el.classList.add('joint'); state.items.joints.push(newObjectState);
+                    } else {
+                        el.innerHTML = '<i class="fas fa-fire-flame-curved"></i>'; el.classList.add('lighter'); state.items.lighters.push(newObjectState);
+                    }
+                }
+                gameScreen.appendChild(el);
+            }
+
+            function gameTick() { if (!state.gameOver) { moveProjectiles(); moveEnemyProjectiles(); moveEnemies(); render(); checkCollisions(); } }
+
+            function moveEnemies() {
+                state.enemies.forEach(enemy => {
+                    if (Math.random() > 0.6) return;
+                    switch (enemy.type.pattern) {
+                        case 'chase':
+                            if (Math.random() < 0.7) { 
+                                if (enemy.x < state.player.x) enemy.x++; else if (enemy.x > state.player.x) enemy.x--;
+                                if (enemy.y < state.player.y) enemy.y++; else if (enemy.y > state.player.y) enemy.y--;
+                            }
+                            break;
+                        case 'random_shoot':
+                            const move = Math.floor(Math.random() * 5);
+                            if (move === 0 && enemy.y > 0) enemy.y--; else if (move === 1 && enemy.y < SCREEN_HEIGHT_CELLS - 1) enemy.y++;
+                            else if (move === 2 && enemy.x > 0) enemy.x--; else if (move === 3 && enemy.x < SCREEN_WIDTH_CELLS - 1) enemy.x++;
+                            if (Math.random() < 0.05) momShoots(enemy);
+                            break;
+                        case 'horizontal':
+                            enemy.y = enemy.patrolLine;
+                            enemy.x += enemy.direction;
+                            if (enemy.x <= 0 || enemy.x >= SCREEN_WIDTH_CELLS - 1) enemy.direction *= -1;
+                            break;
+                        case 'vertical':
+                            enemy.x = enemy.patrolLine;
+                            enemy.y += enemy.direction;
+                            if (enemy.y <= 0 || enemy.y >= SCREEN_HEIGHT_CELLS - 1) enemy.direction *= -1;
+                            break;
+                    }
+                });
+            }
+
+            function moveProjectiles() { for (let i = state.projectiles.length - 1; i >= 0; i--) { const p = state.projectiles[i]; p.x += p.dx; p.y += p.dy; if (p.x < 0 || p.x >= SCREEN_WIDTH_CELLS || p.y < 0 || p.y >= SCREEN_HEIGHT_CELLS) { p.element.remove(); state.projectiles.splice(i, 1); } } }
+            function moveEnemyProjectiles() { for (let i = state.enemyProjectiles.length - 1; i >= 0; i--) { const p = state.enemyProjectiles[i]; p.x += p.dx; p.y += p.dy; if (p.x < -1 || p.x > SCREEN_WIDTH_CELLS || p.y < -1 || p.y > SCREEN_HEIGHT_CELLS) { const ownerMom = state.enemies.find(e => e.id === p.ownerId); if (ownerMom) ownerMom.chineloOnScreen = false; p.element.remove(); state.enemyProjectiles.splice(i, 1); } } }
+
+            function handleKeyDown(e) { if (state.gameOver) return; const key = e.key; if (key.startsWith('Arrow')) { e.preventDefault(); switch (key) { case 'ArrowUp': if (state.player.y > 0) { state.player.y--; state.player.lastDir = { dx: 0, dy: -1 }; } break; case 'ArrowDown': if (state.player.y < SCREEN_HEIGHT_CELLS - 1) { state.player.y++; state.player.lastDir = { dx: 0, dy: 1 }; } break; case 'ArrowLeft': if (state.player.x > 0) { state.player.x--; state.player.lastDir = { dx: -1, dy: 0 }; } break; case 'ArrowRight': if (state.player.x < SCREEN_WIDTH_CELLS - 1) { state.player.x++; state.player.lastDir = { dx: 1, dy: 0 }; } break; } render(); checkCollisions(); } if (key === ' ' && state.canShoot) { e.preventDefault(); shoot(); state.canShoot = false; setTimeout(() => { state.canShoot = true; }, 300); } }
+            function shoot() { const el = document.createElement('div'); el.className = 'projectile'; const p = { x: state.player.x + 0.3, y: state.player.y + 0.3, dx: state.player.lastDir.dx * 0.5, dy: state.player.lastDir.dy * 0.5, element: el }; state.projectiles.push(p); gameScreen.appendChild(el); }
+            
+            function momShoots(mom) {
+                if (mom.chineloOnScreen) return;
+                mom.chineloOnScreen = true;
+                const el = document.createElement('div');
+                el.className = 'game-object enemy-projectile';
+                // Ponto 3: Mãe atira uma bomba
+                el.innerHTML = '<i class="fas fa-bomb"></i>';
+                const angle = Math.atan2(state.player.y - mom.y, state.player.x - mom.x);
+                const p = { x: mom.x, y: mom.y, dx: Math.cos(angle) * 0.3, dy: Math.sin(angle) * 0.3, element: el, ownerId: mom.id };
+                state.enemyProjectiles.push(p);
+                gameScreen.appendChild(el);
+            }
+
+            function checkCollisions() {
+                if (state.gameOver) return;
+                for (let i = state.projectiles.length - 1; i >= 0; i--) {
+                    const p = state.projectiles[i]; if (!p) continue;
+                    for (let j = state.enemies.length - 1; j >= 0; j--) {
+                        const enemy = state.enemies[j];
+                        if (Math.abs(p.x - enemy.x) < 0.8 && Math.abs(p.y - enemy.y) < 0.8) {
+                            if (enemy.type.pattern === 'random_shoot') {
+                                loseLife();
+                            } else {
+                                state.score += 5;
+                                enemy.element.remove(); state.enemies.splice(j, 1);
+                            }
+                            p.element.remove(); state.projectiles.splice(i, 1);
+                            render(); return;
+                        }
+                    }
+                }
+                for (let i = state.enemyProjectiles.length - 1; i >= 0; i--) {
+                    const p = state.enemyProjectiles[i]; if (!p) continue;
+                    if (Math.abs(p.x - state.player.x) < 0.8 && Math.abs(p.y - state.player.y) < 0.8) {
+                        const ownerMom = state.enemies.find(e => e.id === p.ownerId);
+                        if (ownerMom) ownerMom.chineloOnScreen = false;
+                        p.element.remove(); state.enemyProjectiles.splice(i, 1);
+                        loseLife(); return;
+                    }
+                }
+                for (const enemy of state.enemies) { if (state.player.x === enemy.x && state.player.y === enemy.y) { loseLife(); return; } }
+                
+                checkItemCollision(state.items.joints, 'joint');
+                checkItemCollision(state.items.lighters, 'lighter');
+            }
+
+            function checkItemCollision(items, type) {
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const item = items[i];
+                    if (state.player.x === item.x && state.player.y === item.y) {
+                        if (type === 'joint') {
+                            // Ponto 2: Lógica de inventário simplificada
+                            state.hasCollectedJoint = true;
+                        } else if (type === 'lighter') {
+                            if (state.hasCollectedJoint) {
+                                state.score += 50;
+                                state.hasCollectedJoint = false; // Reseta para o próximo round
+                                spawnItemSet();
+                                // Ponto 1: Inimigos retornam ao completar um set
+                                spawnEnemy('police');
+                                spawnEnemy('priest');
+                                spawnEnemy('crime');
+                            } else {
+                                loseLife();
+                            }
+                        }
+                        item.element.remove(); items.splice(i, 1);
+                        render();
+                    }
+                }
+            }
+
+            function loseLife() {
+                if(state.gameOver) return;
+                state.lives--;
+                if (state.lives <= 0) {
+                    endGame("FIM DE JOGO");
+                } else {
+                    state.player.x = 1; state.player.y = 1;
+                    render();
+                }
+            }
+
+            function endGame(message) {
+                state.gameOver = true;
+                clearInterval(gameInterval);
+                let highScore = localStorage.getItem('seitaHighScore') || 0;
+                if (state.score > highScore) {
+                    highScore = state.score;
+                    localStorage.setItem('seitaHighScore', highScore);
+                }
+                gameOverTitle.textContent = message;
+                finalScoreEl.textContent = state.score;
+                highScoreEl.textContent = highScore;
+                gameOverOverlay.style.display = 'flex';
+            }
+
+            function render() {
+                playerEl.style.left = `${state.player.x * GRID_SIZE}px`; playerEl.style.top = `${state.player.y * GRID_SIZE}px`;
+                state.enemies.forEach(o => { o.element.style.left = `${o.x * GRID_SIZE}px`; o.element.style.top = `${o.y * GRID_SIZE}px`; });
+                state.items.joints.forEach(o => { o.element.style.left = `${o.x * GRID_SIZE}px`; o.element.style.top = `${o.y * GRID_SIZE}px`; });
+                state.items.lighters.forEach(o => { o.element.style.left = `${o.x * GRID_SIZE}px`; o.element.style.top = `${o.y * GRID_SIZE}px`; });
+                state.projectiles.forEach(o => { o.element.style.left = `${o.x * GRID_SIZE}px`; o.element.style.top = `${o.y * GRID_SIZE}px`; });
+                state.enemyProjectiles.forEach(o => { o.element.style.left = `${o.x * GRID_SIZE}px`; o.element.style.top = `${o.y * GRID_SIZE}px`; });
+                
+                livesDisplay.innerHTML = `Vidas: ${' <i class="fas fa-heart" style="color: #f44336;"></i>'.repeat(state.lives)}`;
+                // Ponto 2: Renderização do inventário removida
+                scoreDisplay.textContent = `Pontos: ${state.score}`;
+            }
+
+            setupGame();
+            document.addEventListener('keydown', handleKeyDown);
+        });
+    </script>
+</body>
+</html>
