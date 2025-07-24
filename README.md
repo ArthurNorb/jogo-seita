@@ -2,7 +2,7 @@
 
 Bem-vindo ao repositório oficial do "Desafio da Seita que Dói Menos", um jogo de sobrevivência e tiro com uma temática única e bem-humorada. Este projeto foi desenvolvido como um jogo de navegador, utilizando apenas HTML, CSS e JavaScript, sem a necessidade de frameworks externos.
 
-**🚀 Jogue agora mesmo! [Clique aqui para jogar](https://arthurnorb.github.io/jogo-seita/jogo.html)**
+**🚀 Jogue agora mesmo! [Clique aqui para jogar](https://arthurnorb.github.io/jogo-seita/jogo_da_seita.html)**
 
 ---
 
